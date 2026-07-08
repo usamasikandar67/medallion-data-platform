@@ -1,0 +1,10 @@
+version: 2
+sources:
+  - name: bronze
+    database: warehouse
+    schema: main
+    tables:
+      - name: raw_customers
+        description: "Raw customers Change Data Capture log table loaded from Bronze Parquet."
+      - name: raw_orders
+        description: "Raw orders Change Data Capture log table loaded from Bronze Parquet."

@@ -1,0 +1,52 @@
+name: Medallion Platform CI
+
+on:
+  pull_request:
+    branches: [ main ]
+  push:
+    branches: [ main ]
+
+jobs:
+  validate-pipeline:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pandas pyarrow fastparquet dbt-core dbt-sqlite
+
+      - name: Run Operational Simulator (Timeout simulation to populate records)
+        run: |
+          timeout 10s python scripts/db_simulator.py || true
+          echo "Source database and CDC event log initialized."
+
+      - name: Run CDC extraction & Bronze Ingest
+        run: |
+          python scripts/cdc_extractor.py
+          python scripts/ingest_bronze.py
+
+      - name: Load Bronze to SQLite raw sources
+        run: |
+          python scripts/load_bronze_to_sqlite.py
+
+      - name: Initialize Gold schema & Date dimension
+        run: |
+          python scripts/generate_dim_date.py
+
+      - name: Run dbt Build and Data Quality Tests
+        run: |
+          cd transformations
+          dbt build --profiles-dir .
+
+      - name: Generate metrics and dashboard stats
+        run: |
+          python scripts/generate_dashboard_data.py

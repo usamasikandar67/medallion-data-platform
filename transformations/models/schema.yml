@@ -1,0 +1,66 @@
+version: 2
+
+models:
+  - name: stg_customers
+    description: "Cleaned customer staging view."
+    columns:
+      - name: customer_id
+        description: "Primary key natural ID of customer."
+        tests:
+          - not_null
+
+  - name: stg_orders
+    description: "Cleaned orders staging view."
+    columns:
+      - name: order_id
+        description: "Primary key natural ID of order."
+        tests:
+          - not_null
+
+  - name: silver_customers
+    description: "Conformed slowly changing customer history table."
+    columns:
+      - name: customer_sk
+        description: "Surrogate key unique for each history version."
+        tests:
+          - unique
+          - not_null
+
+  - name: silver_orders
+    description: "Conformed orders table."
+    columns:
+      - name: order_id
+        description: "Conformed primary key order ID."
+        tests:
+          - unique
+          - not_null
+
+  - name: dim_customers
+    description: "Customer analytical dimension table."
+    columns:
+      - name: customer_sk
+        description: "Primary surrogate key for customer versions."
+        tests:
+          - unique
+          - not_null
+
+  - name: fact_orders
+    description: "Orders analytical fact table."
+    columns:
+      - name: order_id
+        description: "Fact primary key order ID."
+        tests:
+          - unique
+          - not_null
+      - name: customer_sk
+        description: "Foreign surrogate key referencing customer dimension."
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_customers')
+              field: customer_sk
+      - name: order_status
+        description: "Status check."
+        tests:
+          - accepted_values:
+              values: ['Pending', 'Shipped', 'Delivered', 'Cancelled']

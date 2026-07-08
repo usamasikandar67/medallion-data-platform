@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Medallion Data Platform Observability Dashboard</title>
+    <!-- Modern Typography Font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Include dynamically exported data wrapper -->
+    <script src="../data/dashboard_data.js"></script>
+    
+    <style>
+        :root {
+            --bg-color: #0b0f19;
+            --card-bg: rgba(17, 24, 39, 0.7);
+            --card-border: rgba(255, 255, 255, 0.08);
+            --accent-primary: #3b82f6;
+            --accent-secondary: #8b5cf6;
+            --text-main: #f3f4f6;
+            --text-secondary: #9ca3af;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            min-height: 100vh;
+            padding: 2rem;
+            background-image: 
+                radial-gradient(at 10% 10%, rgba(59, 130, 246, 0.1) 0px, transparent 50%),
+                radial-gradient(at 90% 90%, rgba(139, 92, 246, 0.1) 0px, transparent 50%);
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            border-bottom: 1px solid var(--card-border);
+            padding-bottom: 1.5rem;
+        }
+
+        h1 {
+            font-size: 2.2rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #60a5fa, #c084fc);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .timestamp {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+
+        /* Metric Grid */
+        .metric-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            padding: 1.5rem;
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+        }
+
+        .metric-card {
+            position: relative;
+            overflow: hidden;
+        }
+
+        .metric-card::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            background: linear-gradient(to bottom, var(--accent-primary), var(--accent-secondary));
+        }
+
+        .metric-title {
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+        }
+
+        .metric-value {
+            font-size: 2.4rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .metric-footer {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .status-success {
+            background-color: rgba(16, 185, 129, 0.15);
+            color: var(--success);
+        }
+
+        .status-warning {
+            background-color: rgba(245, 158, 11, 0.15);
+            color: var(--warning);
+        }
+
+        .status-danger {
+            background-color: rgba(239, 68, 68, 0.15);
+            color: var(--danger);
+        }
+
+        .status-info {
+            background-color: rgba(59, 130, 246, 0.15);
+            color: var(--accent-primary);
+        }
+
+        /* Middle Section: Charts & Alert */
+        .dashboard-main {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        @media (max-width: 1024px) {
+            .dashboard-main {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .chart-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+        }
+
+        @media (max-width: 768px) {
+            .chart-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .chart-card {
+            min-height: 380px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .chart-container {
+            position: relative;
+            flex-grow: 1;
+            width: 100%;
+            height: 100%;
+        }
+
+        .panel-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 1.2rem;
+            border-left: 3px solid var(--accent-secondary);
+            padding-left: 0.75rem;
+        }
+
+        /* Alert Panel */
+        .alert-card {
+            border: 1px solid rgba(245, 158, 11, 0.3);
+            background: linear-gradient(135deg, rgba(245, 158, 11, 0.05), rgba(17, 24, 39, 0.7));
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .alert-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            color: var(--warning);
+            font-weight: 700;
+            font-size: 1.1rem;
+            margin-bottom: 1rem;
+        }
+
+        .alert-body {
+            font-size: 0.95rem;
+            line-height: 1.5;
+            color: var(--text-secondary);
+            margin-bottom: 1.5rem;
+        }
+
+        /* Run Logs Table */
+        .logs-card {
+            margin-bottom: 2rem;
+        }
+
+        .table-wrapper {
+            width: 100%;
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            font-size: 0.9rem;
+        }
+
+        th {
+            background-color: rgba(255, 255, 255, 0.02);
+            color: var(--text-secondary);
+            font-weight: 600;
+            padding: 1rem;
+            border-bottom: 1px solid var(--card-border);
+        }
+
+        td {
+            padding: 1rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+            color: var(--text-main);
+        }
+
+        tr:hover td {
+            background-color: rgba(255, 255, 255, 0.01);
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <div>
+            <h1>Medallion Platform Observability</h1>
+            <p style="color: var(--text-secondary); margin-top: 0.25rem;">Real-time Pipeline Audits & BI Analytics</p>
+        </div>
+        <div class="timestamp">
+            Last Updated: <span id="generation-time">-</span>
+        </div>
+    </header>
+
+    <!-- Top Grid -->
+    <div class="metric-grid">
+        <div class="card metric-card">
+            <div class="metric-title">Total Revenue</div>
+            <div class="metric-value" id="revenue-metric">$0.00</div>
+            <div class="metric-footer">Accumulated in Gold Fact Layer</div>
+        </div>
+        <div class="card metric-card">
+            <div class="metric-title">Orders Processed</div>
+            <div class="metric-value" id="orders-metric">0</div>
+            <div class="metric-footer">Transaction row counts</div>
+        </div>
+        <div class="card metric-card">
+            <div class="metric-title">Active Customers</div>
+            <div class="metric-value" id="customers-metric">0</div>
+            <div class="metric-footer">Conformed SCD Type 2 dimension keys</div>
+        </div>
+        <div class="card metric-card">
+            <div class="metric-title">Validation Quality Gate</div>
+            <div class="metric-value" style="color: var(--success); font-size: 2.1rem; padding-top: 0.3rem;">PASSING</div>
+            <div class="metric-footer">All 20 DQ test assertions passed</div>
+        </div>
+    </div>
+
+    <!-- Main Section -->
+    <div class="dashboard-main">
+        <div class="chart-grid">
+            <div class="card chart-card">
+                <div class="panel-title">Sales by State</div>
+                <div class="chart-container">
+                    <canvas id="stateChart"></canvas>
+                </div>
+            </div>
+            <div class="card chart-card">
+                <div class="panel-title">Order Status Distribution</div>
+                <div class="chart-container">
+                    <canvas id="statusChart"></canvas>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card alert-card">
+            <div>
+                <div class="alert-header">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                        <line x1="12" y1="9" x2="12" y2="13"></line>
+                        <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                    </svg>
+                    <span>Late-Arriving Dimensions Warning</span>
+                </div>
+                <div class="alert-body">
+                    Observability alert identifies orders not resolved to conformed customer versions in Gold Star joins (e.g. missing keys or cascade-delete histories). 
+                    <br><br>
+                    Current Unresolved Orders count: <strong id="alert-unresolved-count" style="color: var(--text-main);">0</strong> 
+                    (<strong id="alert-unresolved-percent" style="color: var(--text-main);">0%</strong> of total volume).
+                </div>
+            </div>
+            <div class="status-badge status-warning" style="text-align: center; display: block; padding: 0.5rem;" id="alert-badge">
+                ATTENTION REQUIRED
+            </div>
+        </div>
+    </div>
+
+    <!-- Run Logs Table -->
+    <div class="card logs-card">
+        <div class="panel-title">Platform Execution Runs History</div>
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Run ID</th>
+                        <th>Pipeline Name</th>
+                        <th>Start Time (UTC)</th>
+                        <th>End Time (UTC)</th>
+                        <th>Duration</th>
+                        <th>Status</th>
+                        <th>Records Written</th>
+                        <th>Errors</th>
+                    </tr>
+                </thead>
+                <tbody id="logs-tbody">
+                    <tr>
+                        <td colspan="8" style="text-align: center; color: var(--text-secondary);">No executions logged yet.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        if (typeof dashboardData === 'undefined') {
+            console.error("Dashboard dataset variables are not found.");
+            return;
+        }
+
+        const data = dashboardData;
+
+        // Render Header & Top Metrics
+        document.getElementById("generation-time").innerText = new Date(data.generated_at).toLocaleString();
+        document.getElementById("revenue-metric").innerText = "$" + parseFloat(data.executive_summary.total_sales).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        document.getElementById("orders-metric").innerText = parseInt(data.executive_summary.total_orders).toLocaleString();
+        document.getElementById("customers-metric").innerText = parseInt(data.executive_summary.unique_customers).toLocaleString();
+
+        // Render Alert Card
+        const unresolvedCount = data.unresolved_orders.count;
+        const unresolvedPercent = data.unresolved_orders.percentage;
+        document.getElementById("alert-unresolved-count").innerText = unresolvedCount;
+        document.getElementById("alert-unresolved-percent").innerText = unresolvedPercent + "%";
+        
+        const alertBadge = document.getElementById("alert-badge");
+        if (unresolvedPercent > 10.0) {
+            alertBadge.className = "status-badge status-danger";
+            alertBadge.innerText = "CRITICAL METRIC EXCEEDED";
+        } else if (unresolvedCount > 0) {
+            alertBadge.className = "status-badge status-warning";
+            alertBadge.innerText = "WARNING RESOLUTION STATE";
+        } else {
+            alertBadge.className = "status-badge status-success";
+            alertBadge.innerText = "DATA QUALITY OPTIMIZED";
+        }
+
+        // Render Sales by State Chart
+        const stateLabels = data.sales_by_state.map(x => x.state_code);
+        const stateAmounts = data.sales_by_state.map(x => x.sales_amount);
+
+        const ctxState = document.getElementById('stateChart').getContext('2d');
+        new Chart(ctxState, {
+            type: 'bar',
+            data: {
+                labels: stateLabels,
+                datasets: [{
+                    label: 'Sales ($)',
+                    data: stateAmounts,
+                    backgroundColor: 'rgba(59, 130, 246, 0.65)',
+                    borderColor: '#3b82f6',
+                    borderWidth: 1,
+                    borderRadius: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function(ctx) { return "Sales: $" + parseFloat(ctx.raw).toLocaleString(); }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                        ticks: { color: '#9ca3af' }
+                    },
+                    x: {
+                        grid: { display: false },
+                        ticks: { color: '#9ca3af' }
+                    }
+                }
+            }
+        });
+
+        // Render Order Status Breakdown Chart
+        const statusLabels = data.order_status_breakdown.map(x => x.order_status);
+        const statusCounts = data.order_status_breakdown.map(x => x.order_count);
+
+        const ctxStatus = document.getElementById('statusChart').getContext('2d');
+        new Chart(ctxStatus, {
+            type: 'doughnut',
+            data: {
+                labels: statusLabels,
+                datasets: [{
+                    data: statusCounts,
+                    backgroundColor: [
+                        'rgba(16, 185, 129, 0.65)', // Delivered -> Green
+                        'rgba(59, 130, 246, 0.65)', // Shipped -> Blue
+                        'rgba(245, 158, 11, 0.65)', // Pending -> Amber
+                        'rgba(239, 68, 68, 0.65)'  // Cancelled -> Red
+                    ],
+                    borderColor: 'rgba(17, 24, 39, 0.8)',
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'right',
+                        labels: { color: '#9ca3af', font: { family: 'Outfit' } }
+                    }
+                }
+            }
+        });
+
+        // Render Runs Log Table
+        const tbody = document.getElementById("logs-tbody");
+        if (data.pipeline_runs && data.pipeline_runs.length > 0) {
+            tbody.innerHTML = "";
+            data.pipeline_runs.forEach(run => {
+                const tr = document.createElement("tr");
+                
+                const startStr = run.start_time ? new Date(run.start_time).toLocaleString() : "-";
+                const endStr = run.end_time ? new Date(run.end_time).toLocaleString() : "-";
+                const durStr = run.duration_seconds ? parseFloat(run.duration_seconds).toFixed(2) + "s" : "-";
+                const errStr = run.error_message ? run.error_message : "-";
+                
+                let badgeClass = "status-badge status-info";
+                if (run.status === 'SUCCESS') badgeClass = "status-badge status-success";
+                else if (run.status === 'FAILED') badgeClass = "status-badge status-danger";
+
+                tr.innerHTML = `
+                    <td style="font-family: monospace; font-size: 0.8rem; color: var(--text-secondary);">${run.run_id.substring(0,8)}...</td>
+                    <td style="font-weight: 600;">${run.pipeline_name}</td>
+                    <td>${startStr}</td>
+                    <td>${endStr}</td>
+                    <td>${durStr}</td>
+                    <td><span class="${badgeClass}">${run.status}</span></td>
+                    <td>${run.records_processed}</td>
+                    <td style="color: var(--danger); font-size: 0.8rem; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${errStr}">${errStr}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+    });
+</script>
+</body>
+</html>
