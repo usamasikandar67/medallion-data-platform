@@ -1,4 +1,4 @@
-# dbt profiles configuration for local SQLite warehouse database
+# dbt profiles configuration for local SQLite and remote Databricks target
 transformations:
   outputs:
     dev:
@@ -9,4 +9,12 @@ transformations:
       schemas_and_paths:
         main: "../data/warehouse.db"
       schema_directory: "../data"
+    databricks:
+      type: databricks
+      host: "adb-7474645859205897.azuredatabricks.net" # Workspace ID configuration mapping
+      http_path: "{{ env_var('DATABRICKS_HTTP_PATH') }}"
+      token: "{{ env_var('DATABRICKS_TOKEN') }}"
+      catalog: "{{ env_var('DATABRICKS_CATALOG', 'hive_metastore') }}"
+      schema: "{{ env_var('DATABRICKS_SCHEMA', 'main') }}"
+      threads: 4
   target: dev
