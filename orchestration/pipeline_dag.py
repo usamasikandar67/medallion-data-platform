@@ -12,6 +12,39 @@ bronze_parquet = Dataset("file:///opt/airflow/data/bronze")
 warehouse_db = Dataset("file:///opt/airflow/data/warehouse.db")
 dashboard_stats = Dataset("file:///opt/airflow/data/dashboard_stats.json")
 
+def slack_failure_callback(context):
+    """
+    Mock Slack failure callback function. Writes failed task alerts to logs/slack_alerts.log.
+    """
+    import os
+    from datetime import datetime
+    
+    # Extract details from execution context
+    task_instance = context.get('task_instance')
+    task_id = task_instance.task_id if task_instance else 'unknown_task'
+    dag_id = task_instance.dag_id if task_instance else 'unknown_dag'
+    run_id = context.get('run_id', 'unknown_run')
+    exception = context.get('exception', 'No exception trace')
+    
+    log_dir = "/opt/airflow/logs"
+    if not os.path.exists(log_dir):
+        log_dir = "logs"
+    os.makedirs(log_dir, exist_ok=True)
+    
+    alert_path = os.path.join(log_dir, "slack_alerts.log")
+    alert_msg = (
+        f"[{datetime.now().isoformat()}] [SLACK ALERT] 🚨 Pipeline Failure Detected!\n"
+        f"  DAG: {dag_id}\n"
+        f"  Task: {task_id}\n"
+        f"  Run ID: {run_id}\n"
+        f"  Error Exception: {exception}\n"
+        f"  Action Required: Check task logs for details.\n"
+        "--------------------------------------------------\n"
+    )
+    with open(alert_path, 'a') as f:
+        f.write(alert_msg)
+    print(f"Mock Slack Alert written to: {alert_path}")
+
 # Default task arguments
 default_args = {
     'owner': 'airflow',
@@ -20,6 +53,7 @@ default_args = {
     'email_on_retry': False,
     'retries': 2,
     'retry_delay': timedelta(minutes=1),
+    'on_failure_callback': slack_failure_callback,
 }
 
 with DAG(

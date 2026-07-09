@@ -86,14 +86,25 @@ def ingest_bronze():
     for (entity_type, ingest_date), group_df in grouped:
         # Select and conform schema columns for the target entity
         if entity_type == "customers":
-            target_cols = [col for col in customer_cols if col in group_df.columns]
-            entity_df = group_df[target_cols].copy()
+            expected_cols = customer_cols
         elif entity_type == "orders":
-            target_cols = [col for col in order_cols if col in group_df.columns]
-            entity_df = group_df[target_cols].copy()
+            expected_cols = order_cols
         else:
             print(f"Unknown entity type encountered: {entity_type}. Skipping writing.")
             continue
+            
+        # Detect schema drift (new columns not in expected cols)
+        incoming_cols = set(group_df.columns)
+        expected_set = set(expected_cols)
+        # Exclude internal grouping/partition columns
+        drift_cols = incoming_cols - expected_set - {"ingest_date", "entity_type"}
+        
+        if drift_cols:
+            print(f"[WARNING] Schema Drift: New columns detected in {entity_type}: {list(drift_cols)}")
+            
+        # Conforming target columns: expected columns first, then append evolved columns
+        target_cols = [col for col in expected_cols if col in group_df.columns] + [col for col in drift_cols if col in group_df.columns]
+        entity_df = group_df[target_cols].copy()
             
         # Target partition directory
         partition_dir = os.path.join(BRONZE_DIR, entity_type, f"ingest_date={ingest_date}")

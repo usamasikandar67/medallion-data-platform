@@ -13,3 +13,4 @@ select
     _bronze_ingested_at,
     _bronze_batch_id
 from {{ source('bronze', 'raw_orders') }}
+where order_amount >= 0

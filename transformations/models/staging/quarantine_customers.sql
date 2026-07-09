@@ -12,6 +12,7 @@ select
     created_at,
     updated_at,
     _bronze_ingested_at,
-    _bronze_batch_id
+    _bronze_batch_id,
+    'Invalid email format or missing state code' as quarantine_reason
 from {{ source('bronze', 'raw_customers') }}
-where email like '%@%' and state is not null
+where email not like '%@%' or state is null

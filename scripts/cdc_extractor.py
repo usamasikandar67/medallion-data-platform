@@ -112,6 +112,15 @@ def extract_cdc():
         with open(output_file_path, 'w') as f:
             json.dump(extracted_records, f, indent=4)
             
+        # MOCK KAFKA STREAMING: Append to local streaming topic file
+        kafka_topic_dir = "data/kafka_topics"
+        os.makedirs(kafka_topic_dir, exist_ok=True)
+        kafka_log_path = os.path.join(kafka_topic_dir, "cdc_stream.log")
+        with open(kafka_log_path, 'a') as kf:
+            for rec in extracted_records:
+                kf.write(json.dumps(rec) + "\n")
+        print(f"  Mock Stream: Appended {len(extracted_records)} events to Kafka topic log 'cdc_stream.log'")
+            
         # Update high-water mark state file
         write_state(max_id, max_ts)
         
