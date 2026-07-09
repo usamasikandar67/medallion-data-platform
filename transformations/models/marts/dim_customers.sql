@@ -1,4 +1,7 @@
-{{ config(materialized='table') }}
+{{ config(
+    materialized='table',
+    post_hook="CREATE INDEX IF NOT EXISTS idx_dim_customers_sk ON {{ this.table }} (customer_sk)"
+) }}
 select
     '-1' as customer_sk,
     'unknown' as customer_id,

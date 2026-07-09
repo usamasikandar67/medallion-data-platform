@@ -1,4 +1,7 @@
-{{ config(materialized='table') }}
+{{ config(
+    materialized='table',
+    post_hook="CREATE INDEX IF NOT EXISTS idx_silver_customers_pit ON {{ this.table }} (customer_id, valid_from, valid_to)"
+) }}
 with cust_history as (
     select
         _row_sequence_id,

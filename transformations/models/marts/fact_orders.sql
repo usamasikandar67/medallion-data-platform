@@ -1,4 +1,7 @@
-{{ config(materialized='table') }}
+{{ config(
+    materialized='table',
+    post_hook="CREATE INDEX IF NOT EXISTS idx_fact_orders_sk ON {{ this.table }} (customer_sk)"
+) }}
 select
     o.order_id,
     coalesce(c.customer_sk, '-1') as customer_sk,
