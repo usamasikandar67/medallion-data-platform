@@ -4,18 +4,31 @@ import uuid
 import sqlite3
 from datetime import datetime, timezone
 
-WAREHOUSE_DB = "data/warehouse.db"
-DDL_FILE = "scripts/create_monitoring_schema.sql"
+try:
+    BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+except NameError:
+    BASE_DIR = "/Volumes/workspace/bronze/raw"
+
+IS_DATABRICKS = "DATABRICKS_RUNTIME_VERSION" in os.environ or "/Volumes/" in BASE_DIR or "DB_CLUSTER_ID" in os.environ
+
+WAREHOUSE_DB = os.path.join(BASE_DIR, "data/warehouse.db")
+DDL_FILE = os.path.join(BASE_DIR, "scripts/create_monitoring_schema.sql")
 
 def initialize_monitoring_schema():
+    if IS_DATABRICKS:
+        return
     if not os.path.exists(DDL_FILE):
         return
-    conn = sqlite3.connect(WAREHOUSE_DB)
-    with open(DDL_FILE, 'r') as f:
-        ddl_sql = f.read()
-    conn.executescript(ddl_sql)
-    conn.commit()
-    conn.close()
+    os.makedirs(os.path.dirname(WAREHOUSE_DB), exist_ok=True)
+    try:
+        conn = sqlite3.connect(WAREHOUSE_DB)
+        with open(DDL_FILE, 'r') as f:
+            ddl_sql = f.read()
+        conn.executescript(ddl_sql)
+        conn.commit()
+        conn.close()
+    except sqlite3.OperationalError:
+        pass
 
 # Initialize dynamically on import
 initialize_monitoring_schema()
@@ -23,6 +36,8 @@ initialize_monitoring_schema()
 def log_start(pipeline_name):
     run_id = str(uuid.uuid4())
     start_time = datetime.now(timezone.utc).isoformat()
+    if IS_DATABRICKS:
+        return run_id, start_time
     
     conn = sqlite3.connect(WAREHOUSE_DB)
     cursor = conn.cursor()
@@ -39,6 +54,8 @@ def log_start(pipeline_name):
     return run_id, start_time
 
 def log_success(run_id, start_time_iso, records_processed=0):
+    if IS_DATABRICKS:
+        return
     end_time = datetime.now(timezone.utc).isoformat()
     start_dt = datetime.fromisoformat(start_time_iso)
     end_dt = datetime.fromisoformat(end_time)
@@ -58,6 +75,8 @@ def log_success(run_id, start_time_iso, records_processed=0):
     conn.close()
 
 def log_failure(run_id, start_time_iso, error_message):
+    if IS_DATABRICKS:
+        return
     end_time = datetime.now(timezone.utc).isoformat()
     start_dt = datetime.fromisoformat(start_time_iso)
     end_dt = datetime.fromisoformat(end_time)

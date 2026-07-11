@@ -5,16 +5,13 @@ import json
 import sqlite3
 from datetime import datetime, timezone
 
-# Simple .env parser to avoid external dependencies
-def load_env():
-    env_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), '.env')
-    if os.path.exists(env_path):
-        with open(env_path, 'r') as f:
-            for line in f:
-                line = line.strip()
-                if line and not line.startswith('#') and '=' in line:
-                    key, val = line.split('=', 1)
-                    os.environ[key.strip()] = val.strip()
+# Add project root to sys path
+try:
+    sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+except NameError:
+    sys.path.append("/Volumes/workspace/bronze/raw")
+    sys.path.append("/Volumes/workspace/bronze/raw/scripts")
+from utility.env_loader import load_env
 
 load_env()
 

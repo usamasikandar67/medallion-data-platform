@@ -14,6 +14,12 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v3
 
+      - name: Set up Java
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
@@ -22,7 +28,25 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install pandas pyarrow fastparquet dbt-core dbt-sqlite
+          pip install pandas pyarrow fastparquet dbt-core dbt-sqlite pyspark delta-spark pytest black flake8
+
+      - name: Run Code Linters
+        run: |
+          echo "Running Black code formatting check..."
+          black --check scripts/ tests/ orchestration/ --exclude=venv/ || echo "Warning: Black checks failed, please run black to format your code."
+          echo "Running Flake8 lint check..."
+          flake8 scripts/ tests/ orchestration/ --count --select=E9,F63,F7,F82 --show-source --statistics --exclude=venv/
+
+      - name: Validate Databricks Workflow Configuration
+        run: |
+          echo "Validating orchestration/databricks_workflow.json..."
+          python3 -c "import json; json.load(open('orchestration/databricks_workflow.json'))"
+          echo "Databricks workflow JSON is valid."
+
+      - name: Run PySpark Unit Tests
+        run: |
+          echo "Running PySpark unit tests..."
+          python3 -m pytest tests/test_databricks_transformations.py
 
       - name: Run Operational Simulator (Timeout simulation to populate records)
         run: |
@@ -50,3 +74,4 @@ jobs:
       - name: Generate metrics and dashboard stats
         run: |
           python scripts/generate_dashboard_data.py
+

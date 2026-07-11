@@ -104,8 +104,7 @@ with DAG(
         bash_command='dbt test --profiles-dir .',
         cwd='/opt/airflow/transformations'
     )
-
-    # 6. Generate dashboard exports
+  # 6. Generate dashboard exports
     generate_dashboard_data = BashOperator(
         task_id='generate_dashboard_data',
         bash_command='python3 /opt/airflow/scripts/generate_dashboard_data.py',

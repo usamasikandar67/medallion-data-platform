@@ -1,0 +1,61 @@
+{
+  "name": "Medallion_Data_Platform_Pipeline",
+  "description": "Orchestrates the Bronze, Silver, and Gold Medallion layers using Databricks Jobs.",
+  "email_notifications": {
+    "on_failure": ["data-engineering@example.com"],
+    "no_alert_for_skipped_runs": true
+  },
+  "timeout_seconds": 3600,
+  "max_concurrent_runs": 1,
+  "format": "MULTI_TASK",
+  "tasks": [
+    {
+      "task_key": "1_Bronze_Ingestion",
+      "description": "Ingests CDC data into Unity Catalog Bronze tables.",
+      "spark_python_task": {
+        "python_file": "dbfs:/Volumes/workspace/bronze/raw/scripts/ingest_bronze.py"
+      },
+      "environment_key": "default_env",
+      "timeout_seconds": 900,
+      "max_retries": 1
+    },
+    {
+      "task_key": "2_Silver_Processing",
+      "depends_on": [
+        {
+          "task_key": "1_Bronze_Ingestion"
+        }
+      ],
+      "description": "Applies DQ rules, handles Quarantines, and performs SCD Type 2 MERGE.",
+      "spark_python_task": {
+        "python_file": "dbfs:/Volumes/workspace/bronze/raw/scripts/databricks_silver_layer.py"
+      },
+      "environment_key": "default_env",
+      "timeout_seconds": 1800,
+      "max_retries": 1
+    },
+    {
+      "task_key": "3_Gold_Processing",
+      "depends_on": [
+        {
+          "task_key": "2_Silver_Processing"
+        }
+      ],
+      "description": "Builds Star Schema dimensional models and aggregated KPIs, then runs OPTIMIZE.",
+      "spark_python_task": {
+        "python_file": "dbfs:/Volumes/workspace/bronze/raw/scripts/databricks_gold_layer.py"
+      },
+      "environment_key": "default_env",
+      "timeout_seconds": 1800,
+      "max_retries": 1
+    }
+  ],
+  "environments": [
+    {
+      "environment_key": "default_env",
+      "spec": {
+        "client": "1"
+      }
+    }
+  ]
+}

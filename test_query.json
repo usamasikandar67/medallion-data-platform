@@ -1,0 +1,7 @@
+{
+  "query": {
+    "display_name": "Medallion Daily Sales Trend",
+    "query_text": "SELECT order_date, total_revenue, total_orders FROM workspace.gold.agg_daily_sales ORDER BY order_date ASC;",
+    "warehouse_id": "1c76890fe19730f4"
+  }
+}

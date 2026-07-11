@@ -5,7 +5,7 @@ import base64
 import requests
 
 WORKSPACE_ID = "7474645859205897"
-DEFAULT_HOST = f"https://adb-{WORKSPACE_ID}.azuredatabricks.net"
+DEFAULT_HOST = f"https://adb-{7474645859205897}.azuredatabricks.net"
 
 DATABRICKS_HOST = os.getenv("DATABRICKS_HOST", DEFAULT_HOST)
 DATABRICKS_TOKEN = os.getenv("DATABRICKS_TOKEN")
