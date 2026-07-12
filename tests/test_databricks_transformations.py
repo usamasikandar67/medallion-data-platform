@@ -6,7 +6,7 @@ from datetime import datetime
 # pyrefly: ignore [missing-import]
 from pyspark.sql import SparkSession
 # pyrefly: ignore [missing-import]
-from pyspark.sql.types import StructType, StructField, StringType, TimestampType
+from pyspark.sql.types import StructType, StructField, StringType, DoubleType
 
 # Add project root and scripts directory to sys path
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -62,7 +62,7 @@ def test_apply_data_quality_rules_orders(spark):
     
     schema = StructType([
         StructField("order_id", StringType(), True),
-        StructField("order_amount", StringType(), True)
+        StructField("order_amount", DoubleType(), True)
     ])
     
     data = [

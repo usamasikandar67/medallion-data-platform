@@ -89,17 +89,20 @@ class DatabricksUtils:
             # Rule 1: order_id must not be null
             # Rule 2: order_amount must be >= 0
             
+            # Cast order_amount to double for safe numerical comparisons
+            order_amount_col = col("order_amount").cast("double")
+            
             dq_df = df.withColumn(
                 "_dq_failed",
                 when(col("order_id").isNull(), lit(True))
-                .when(col("order_amount") < 0, lit(True))
+                .when(order_amount_col < 0, lit(True))
                 .otherwise(lit(False))
             )
             
             dq_df = dq_df.withColumn(
                 "_quarantine_reason",
                 when(col("order_id").isNull(), lit("NULL_PK"))
-                .when(col("order_amount") < 0, lit("NEGATIVE_AMOUNT"))
+                .when(order_amount_col < 0, lit("NEGATIVE_AMOUNT"))
                 .otherwise(lit(None))
             )
         else:
